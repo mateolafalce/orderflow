@@ -1,0 +1,9 @@
+SQLAlchemy
+PyMySQL
+python-dotenv
+fastapi
+uvicorn
+openai
+twilio
+python-multipart
+mercadopago
