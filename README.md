@@ -1,7 +1,6 @@
 # Orderflow Service
 
-Lightweight web service for registering products in a MySQL database. It serves a basic HTML interface via FastAPI, posts data to the `/products` endpoint, and stores it in the `products` table.
-
+Lightweight web service for registering products in a MySQL database. 
 
 ## Initial setup
 1. Create a virtual environment:
