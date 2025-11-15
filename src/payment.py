@@ -11,7 +11,7 @@ class MercadoPagoPayment:
     
     def __init__(self):
         self.access_token = os.getenv('MP_ACCESS_TOKEN')
-        self.cbu = os.getenv('CBU')
+        self.test_card_number = os.getenv('TEST_CARD_NUMBER')
         
         # Validate required credentials
         if not self.access_token:
@@ -20,9 +20,9 @@ class MercadoPagoPayment:
                 "MP_ACCESS_TOKEN"
             )
         
-        if not self.cbu:
+        if not self.test_card_number:
             raise ValueError(
-                "Missing CBU. Please check your .env file for CBU"
+                "Missing TEST_CARD_NUMBER. Please check your .env file for TEST_CARD_NUMBER"
             )
         
         # Initialize Mercado Pago SDK
@@ -107,7 +107,7 @@ class MercadoPagoPayment:
                 'amount': amount,
                 'quantity': quantity,
                 'total': amount * quantity,
-                'cbu': self.cbu,  # Include CBU for reference
+                'test_card_number': self.test_card_number,  # Include test card for reference
                 'raw_response': preference  # Include full response for debugging
             }
             
@@ -180,7 +180,7 @@ class MercadoPagoPayment:
                 'order_id': order_id,
                 'total': float(total),
                 'items_count': len(items),
-                'cbu': self.cbu
+                'test_card_number': self.test_card_number
             }
             
         except Exception as e:
@@ -261,7 +261,7 @@ if __name__ == "__main__":
     try:
         payment_service = MercadoPagoPayment()
         print(f"Payment service initialized")
-        print(f"  CBU: {payment_service.cbu}")
+        print(f"  Test Card Number: {payment_service.test_card_number}")
         
         # Test creating a simple payment link
         print("\nCreating test payment link...")
