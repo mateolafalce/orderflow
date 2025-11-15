@@ -181,11 +181,10 @@ async def delete_product(product_id: int) -> dict:
 
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest) -> dict:
-	user_id = "4"  # Default user ID for now
+	user_id = "4"  # It must be a PK(user, date), in order to just take the currect conversation
 	
 	session = get_session()
 	try:
-		# Fetch all products from the database
 		products_statement = select(
 			products_table.c.name,
 			products_table.c.price_half_quantity,
@@ -199,7 +198,6 @@ async def chat_endpoint(request: ChatRequest) -> dict:
 			for row in products_rows
 		]
 		
-		# Get last 10 messages for this user
 		history_statement = (
 			select(
 				conversations_table.c.role,
@@ -210,13 +208,11 @@ async def chat_endpoint(request: ChatRequest) -> dict:
 			.limit(10)
 		)
 		history_rows = session.execute(history_statement).mappings().all()
-		# Reverse to get chronological order
 		conversation_history = [
 			{"role": row["role"], "content": row["content"]}
 			for row in reversed(list(history_rows))
 		]
 		
-		# Save user message
 		user_insert = insert(conversations_table).values(
 			user_id=user_id,
 			role="user",
@@ -233,18 +229,14 @@ async def chat_endpoint(request: ChatRequest) -> dict:
 		) from exc
 	
 	try:
-		# Get response from AI with product context and conversation history
 		response = chat_with_assistant(request.message, products, conversation_history)
 		
-		# Check if response is JSON (order completed)
 		try:
 			order_data = json.loads(response)
 			
-			# Validate it's the expected order JSON structure
 			if all(key in order_data for key in ['products', 'total_price', 'address']):
 				print(f"Order detected from web chat! Creating payment link...")
 				
-				# Create payment link with Mercado Pago
 				payment_result = create_order_payment_link(
 					order_id=hash(user_id) % 1000000,
 					items=[
@@ -259,7 +251,6 @@ async def chat_endpoint(request: ChatRequest) -> dict:
 				)
 				
 				if payment_result['success']:
-					# Create customer-friendly message with payment link
 					products_lines = []
 					for item in order_data['products']:
 						item_total = item['unit_price'] * item['quantity']
@@ -267,12 +258,10 @@ async def chat_endpoint(request: ChatRequest) -> dict:
 					
 					products_list = "\n".join(products_lines)
 					
-					# Check if it's pickup or delivery
 					store_address = os.getenv("ADDRESS", "")
 					is_pickup = (store_address and order_data['address'] == store_address)
 					delivery_text = "Store Pickup:" if is_pickup else "Delivery Address:"
 					
-					# Build message with proper line breaks (for web)
 					customer_message = (
 						"Order Confirmed!\n\n"
 						"Order Summary:\n"
@@ -284,7 +273,6 @@ async def chat_endpoint(request: ChatRequest) -> dict:
 						"Once payment is completed, we will process your order immediately. Thank you for your purchase!"
 					)
 					
-					# Save the customer message as assistant response
 					assistant_insert = insert(conversations_table).values(
 						user_id=user_id,
 						role="assistant",
@@ -308,10 +296,8 @@ async def chat_endpoint(request: ChatRequest) -> dict:
 					return {"response": error_message}
 					
 		except (json.JSONDecodeError, KeyError):
-			# Not a JSON response, continue with normal flow
 			pass
 		
-		# Save assistant response (normal conversation)
 		assistant_insert = insert(conversations_table).values(
 			user_id=user_id,
 			role="assistant",
@@ -388,22 +374,13 @@ async def whatsapp_webhook(
 	Body: str = Form(...),
 	MessageSid: str = Form(None)
 ) -> Response:
-	"""
-	Webhook endpoint for receiving WhatsApp messages from Twilio.
-	Twilio will send POST requests here when messages arrive.
-	"""
-	# Extract phone number (remove 'whatsapp:' prefix)
 	user_phone = From.replace("whatsapp:", "")
 	user_message = Body
-	
-	print(f"Message from {user_phone}: {user_message}")
-	
+
 	session = get_session()
 	try:
-		# Use phone number as user_id for tracking conversations
 		user_id = user_phone
 		
-		# Fetch all products from the database
 		products_statement = select(
 			products_table.c.name,
 			products_table.c.price_half_quantity,
@@ -417,7 +394,6 @@ async def whatsapp_webhook(
 			for row in products_rows
 		]
 		
-		# Get last 10 messages for this user
 		history_statement = (
 			select(
 				conversations_table.c.role,
@@ -428,13 +404,11 @@ async def whatsapp_webhook(
 			.limit(10)
 		)
 		history_rows = session.execute(history_statement).mappings().all()
-		# Reverse to get chronological order
 		conversation_history = [
 			{"role": row["role"], "content": row["content"]}
 			for row in reversed(list(history_rows))
 		]
 		
-		# Save user message
 		user_insert = insert(conversations_table).values(
 			user_id=user_id,
 			role="user",
@@ -443,20 +417,16 @@ async def whatsapp_webhook(
 		session.execute(user_insert)
 		session.commit()
 		
-		# Get response from AI with product context and conversation history
 		ai_response = chat_with_assistant(user_message, products, conversation_history)
 		
-		# Check if response is JSON (order completed)
 		try:
 			order_data = json.loads(ai_response)
 			
-			# Validate it's the expected order JSON structure
 			if all(key in order_data for key in ['products', 'total_price', 'address']):
 				print(f"Order detected! Creating payment link...")
 				
-				# Create payment link with Mercado Pago
 				payment_result = create_order_payment_link(
-					order_id=hash(user_phone) % 1000000,  # Generate unique order ID from phone
+					order_id=hash(user_phone) % 1000000,
 					items=[
 						{
 							'name': item['product'],
@@ -469,7 +439,6 @@ async def whatsapp_webhook(
 				)
 				
 				if payment_result['success']:
-					# Create customer-friendly message with payment link
 					products_lines = []
 					for item in order_data['products']:
 						item_total = item['unit_price'] * item['quantity']
@@ -477,12 +446,10 @@ async def whatsapp_webhook(
 					
 					products_list = "\n".join(products_lines)
 					
-					# Check if it's pickup or delivery
 					store_address = os.getenv("ADDRESS", "")
 					is_pickup = (store_address and order_data['address'] == store_address)
 					delivery_text = "*Store Pickup:*" if is_pickup else "*Delivery Address:*"
 					
-					# Build message with proper line breaks
 					customer_message = (
 						"*Order Confirmed!*\n\n"
 						"*Order Summary:*\n"
@@ -494,7 +461,6 @@ async def whatsapp_webhook(
 						"Once payment is completed, we will process your order immediately. Thank you for your purchase!"
 					)
 					
-					# Save the customer message as assistant response
 					assistant_insert = insert(conversations_table).values(
 						user_id=user_id,
 						role="assistant",
@@ -503,7 +469,6 @@ async def whatsapp_webhook(
 					session.execute(assistant_insert)
 					session.commit()
 					
-					# Send payment link to customer
 					messenger = get_messenger()
 					send_result = messenger.send_message(
 						body=customer_message,
@@ -515,7 +480,6 @@ async def whatsapp_webhook(
 					else:
 						print(f"Failed to send payment link: {send_result.get('error')}")
 				else:
-					# Payment link creation failed
 					error_message = "Sorry, there was an error creating the payment link. Please try again."
 					
 					assistant_insert = insert(conversations_table).values(
@@ -532,17 +496,14 @@ async def whatsapp_webhook(
 						to_number=user_phone
 					)
 				
-				# Return TwiML response
 				return Response(
 					content='<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
 					media_type="application/xml"
 				)
 				
 		except (json.JSONDecodeError, KeyError):
-			# Not a JSON response, continue with normal flow
 			pass
 		
-		# Save assistant response (normal conversation)
 		assistant_insert = insert(conversations_table).values(
 			user_id=user_id,
 			role="assistant",
@@ -551,7 +512,6 @@ async def whatsapp_webhook(
 		session.execute(assistant_insert)
 		session.commit()
 		
-		# Send response back via WhatsApp
 		messenger = get_messenger()
 		send_result = messenger.send_message(
 			body=ai_response,
@@ -563,7 +523,6 @@ async def whatsapp_webhook(
 		else:
 			print(f"Failed to send response: {send_result.get('error')}")
 		
-		# Return empty TwiML response (Twilio expects XML response)
 		return Response(
 			content='<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
 			media_type="application/xml"
@@ -573,7 +532,6 @@ async def whatsapp_webhook(
 		session.rollback()
 		print(f"Error processing WhatsApp message: {str(exc)}")
 		
-		# Try to send error message to user
 		try:
 			messenger = get_messenger()
 			messenger.send_message(
@@ -583,7 +541,6 @@ async def whatsapp_webhook(
 		except:
 			pass
 		
-		# Still return valid TwiML to Twilio
 		return Response(
 			content='<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
 			media_type="application/xml"

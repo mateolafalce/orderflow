@@ -62,7 +62,6 @@ def build_system_prompt(products: list[dict]) -> str:
     
     catalog_text = "\n".join(product_lines) if product_lines else "- No products available"
     
-    # Add business address info if available
     address_info = f"\n\nOur store address for pickup: {business_address}" if business_address else ""
     
     system_prompt = f"""You are a customer service agent for {business_name}, a {business_kind}.

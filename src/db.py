@@ -92,7 +92,6 @@ def _ensure_products_table_schema(engine: Engine) -> None:
 					)
 				)
 		except SQLAlchemyError:
-			# Leave the existing schema untouched if inspection fails.
 			pass
 
 

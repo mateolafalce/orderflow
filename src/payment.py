@@ -13,7 +13,6 @@ class MercadoPagoPayment:
         self.access_token = os.getenv('MP_ACCESS_TOKEN')
         self.test_card_number = os.getenv('TEST_CARD_NUMBER')
         
-        # Validate required credentials
         if not self.access_token:
             raise ValueError(
                 "Missing Mercado Pago credentials. Please check your .env file for "
@@ -25,7 +24,6 @@ class MercadoPagoPayment:
                 "Missing TEST_CARD_NUMBER. Please check your .env file for TEST_CARD_NUMBER"
             )
         
-        # Initialize Mercado Pago SDK
         self.sdk = mercadopago.SDK(self.access_token)
     
     def create_payment_link(
@@ -37,7 +35,6 @@ class MercadoPagoPayment:
         external_reference: Optional[str] = None
     ) -> Dict[str, Any]:
         try:
-            # Create preference data
             preference_data = {
                 "items": [
                     {
@@ -45,7 +42,7 @@ class MercadoPagoPayment:
                         "description": description or title,
                         "quantity": quantity,
                         "unit_price": float(amount),
-                        "currency_id": "ARS"  # Argentine Peso
+                        "currency_id": "ARS"  
                     }
                 ],
                 "back_urls": {
@@ -56,35 +53,20 @@ class MercadoPagoPayment:
                 "auto_return": "approved",
                 "payment_methods": {
                     "excluded_payment_types": [],
-                    "installments": 1  # Number of installments allowed
+                    "installments": 1 
                 },
                 "statement_descriptor": os.getenv('BUSINESS_NAME', 'Mi Negocio'),
             }
             
-            # Add external reference if provided
             if external_reference:
                 preference_data["external_reference"] = str(external_reference)
             
-            # preference_data["notification_url"] = "https://your-domain.com/webhook/mercadopago"
-            
-            # Create preference
             preference_response = self.sdk.preference().create(preference_data)
-            
-            # Debug: Print full response
-            print("\nDEBUG - Full API Response:")
-            print(f"Status: {preference_response.get('status')}")
-            print(f"Response keys: {preference_response.keys()}")
-            print(f"Response content: {preference_response.get('response')}")
-            
-            # Check if request was successful
+
             if preference_response["status"] not in [200, 201]:
                 error_details = preference_response.get('response', {})
                 error_msg = error_details.get('message', 'Unknown error')
                 error_cause = error_details.get('cause', [])
-                
-                print(f"\nError details:")
-                print(f"  Message: {error_msg}")
-                print(f"  Cause: {error_cause}")
                 
                 return {
                     'success': False,
@@ -94,21 +76,18 @@ class MercadoPagoPayment:
                 }
             
             preference = preference_response["response"]
-            print(f"Preference keys: {preference.keys()}")
-            print(f"Init point: {preference.get('init_point')}")
-            print(f"ID: {preference.get('id')}")
             
             return {
                 'success': True,
-                'payment_link': preference.get('init_point'),  # Link for web
-                'payment_link_mobile': preference.get('sandbox_init_point'),  # Link for mobile/sandbox
+                'payment_link': preference.get('init_point'), 
+                'payment_link_mobile': preference.get('sandbox_init_point'), 
                 'preference_id': preference.get('id'),
                 'external_reference': external_reference,
                 'amount': amount,
                 'quantity': quantity,
                 'total': amount * quantity,
-                'test_card_number': self.test_card_number,  # Include test card for reference
-                'raw_response': preference  # Include full response for debugging
+                'test_card_number': self.test_card_number,  
+                'raw_response': preference 
             }
             
         except Exception as e:
@@ -126,23 +105,19 @@ class MercadoPagoPayment:
         customer_name: Optional[str] = None
     ) -> Dict[str, Any]:
         try:
-            # Calculate total
             total = sum(item['price'] * item.get('quantity', 1) for item in items)
             
-            # Build title
             if len(items) == 1:
                 title = f"Orden #{order_id} - {items[0]['name']}"
             else:
                 title = f"Orden #{order_id} - {len(items)} productos"
             
-            # Build description
             items_desc = "\n".join([
                 f"- {item['name']} x{item.get('quantity', 1)} (${item['price']})"
                 for item in items
             ])
             description = f"Orden para {customer_name or 'Cliente'}\n{items_desc}"
             
-            # Create preference data with all items
             preference_data = {
                 "items": [
                     {
@@ -168,7 +143,6 @@ class MercadoPagoPayment:
                 "statement_descriptor": os.getenv('BUSINESS_NAME', 'Mi Negocio'),
             }
             
-            # Create preference
             preference_response = self.sdk.preference().create(preference_data)
             preference = preference_response["response"]
             
@@ -223,7 +197,6 @@ def get_payment_service() -> MercadoPagoPayment:
     return _payment_instance
 
 
-# Convenience functions
 def create_payment_link(
     title: str,
     amount: float,
@@ -255,16 +228,8 @@ def create_order_payment_link(
 
 
 if __name__ == "__main__":
-    # Test the integration
-    print("Testing Mercado Pago Integration...")
-    
     try:
         payment_service = MercadoPagoPayment()
-        print(f"Payment service initialized")
-        print(f"  Test Card Number: {payment_service.test_card_number}")
-        
-        # Test creating a simple payment link
-        print("\nCreating test payment link...")
         result = payment_service.create_payment_link(
             title="Empanadas x6",
             amount=2500.00,
