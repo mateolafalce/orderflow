@@ -4,7 +4,7 @@
 
 Lightweight web service for registering products in a MySQL database. 
 
-## Quick Start with Docker (Recommended)
+## Quick Start with Docker 
 
 1. Copy `.env.example` to `.env` and adjust the values:
 
@@ -32,7 +32,7 @@ To rebuild after code changes:
 docker-compose up --build
 ```
 
-## Development Setup (Without Docker)
+## Development Setup
 
 1. Create a virtual environment:
 
