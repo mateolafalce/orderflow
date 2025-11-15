@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # MySQL Database Service
+  db:
+    image: mysql:8.0
+    container_name: orderflow_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-password}
+      MYSQL_DATABASE: ${DB_NAME:-orderflow}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-password}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - orderflow_network
+
+  # FastAPI Application Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: orderflow_app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    environment:
+      - DB_USER=${DB_USER:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - DB_HOST=db
+      - DB_NAME=${DB_NAME:-orderflow}
+      - APP_HOST=0.0.0.0
+      - APP_PORT=8000
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      - BUSINESS_KIND=${BUSINESS_KIND:-restaurant}
+      - BUSINESS_NAME=${BUSINESS_NAME:-Lolok}
+      - ADDRESS=${ADDRESS}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_FROM_NUMBER=${TWILIO_FROM_NUMBER}
+      - TWILIO_TO_NUMBER=${TWILIO_TO_NUMBER}
+      - MP_ACCESS_TOKEN=${MP_ACCESS_TOKEN}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - orderflow_network
+    volumes:
+      # Mount source code for development (optional - comment out for production)
+      - ./src:/app/src
+      - ./public:/app/public
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  orderflow_network:
+    driver: bridge

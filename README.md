@@ -4,7 +4,36 @@
 
 Lightweight web service for registering products in a MySQL database. 
 
-## Initial setup
+## Quick Start with Docker (Recommended)
+
+1. Copy `.env.example` to `.env` and adjust the values:
+
+```bash
+cp .env.example .env
+```
+
+2. Start the services with Docker Compose:
+
+```bash
+docker-compose up
+```
+
+The application will be available at `http://localhost:8000`
+
+To stop the services:
+
+```bash
+docker-compose down
+```
+
+To rebuild after code changes:
+
+```bash
+docker-compose up --build
+```
+
+## Development Setup (Without Docker)
+
 1. Create a virtual environment:
 
 ```bash
@@ -17,13 +46,16 @@ source .venv/bin/activate
 ```bash
 pip install -r src/requirements.txt
 ```
+
 3. Copy `.env.example` to `.env` and adjust the values:
 
 ```bash
 cp .env.example .env
 ```
 
-## Run the project
+4. Make sure you have MySQL running locally and update the `.env` file with your database credentials.
+
+5. Run the project:
 
 ```bash
 python src/main.py
